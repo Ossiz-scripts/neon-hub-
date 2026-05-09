@@ -8,38 +8,43 @@ local Players = game:GetService("Players")
 local lp = Players.LocalPlayer
 
 -- --- 1. HELPER FUNCTIONS ---
+-- --- 1. HELPER FUNCTIONS ---
 local function Drag(g)
-    local d, s, sp
+    local dragging = false
+    local dragInput
+    local dragStart
+    local startPos
 
-    g.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.Touch
-        or i.UserInputType == Enum.UserInputType.MouseButton1 then
-            d = true
-            s = i.Position
-            sp = g.Position
+    g.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch
+        or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragInput = input -- Store the exact finger/click
+            dragStart = input.Position
+            startPos = g.Position
         end
     end)
 
-    UserInputService.InputChanged:Connect(function(i)
-        if d and (
-            i.UserInputType == Enum.UserInputType.Touch
-            or i.UserInputType == Enum.UserInputType.MouseMovement
-        ) then
-            local delta = i.Position - s
+    UserInputService.InputChanged:Connect(function(input)
+        -- Only move if the input moving is the EXACT same finger/click
+        if dragging and input == dragInput then
+            local delta = input.Position - dragStart
             g.Position = UDim2.new(
-                sp.X.Scale,
-                sp.X.Offset + delta.X,
-                sp.Y.Scale,
-                sp.Y.Offset + delta.Y
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
             )
         end
     end)
 
-    g.InputEnded:Connect(function()
-        d = false
+    g.InputEnded:Connect(function(input)
+        if input == dragInput then
+            dragging = false
+            dragInput = nil
+        end
     end)
 end
-
 local function MobileBtn(txt, pos, size, color, parent)
     local b = Instance.new("TextButton", parent)
     b.Text = txt
@@ -238,7 +243,13 @@ local function updatePlayerList()
         end
     end
 end
+Players.PlayerAdded:Connect(function()
+    if listFrame.Visible then updatePlayerList() end
+end)
 
+Players.PlayerRemoving:Connect(function()
+    if listFrame.Visible then updatePlayerList() end
+end)
 local waypoints = {}
 local posFrame = Instance.new("Frame", neonGui)
 posFrame.Size = UDim2.new(0, 160, 0, 230)
@@ -455,5 +466,6 @@ game:GetService("StarterGui"):SetCore("SendNotification", {
     Text = "K to Toggle (PC) | H Button (Mobile)",
     Duration = 5
 })
+
 
 
